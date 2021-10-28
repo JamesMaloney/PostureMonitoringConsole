@@ -61,7 +61,7 @@ namespace PoseRecognition
         private bool ReadRealtime()
         {
             // Initialize logging to output all messages with severity level INFO or higher to the console
-            Cubemos.Api.InitialiseLogging(Cubemos.LogLevel.CM_LL_ERROR, bWriteToConsole: true);
+            //Cubemos.Api.InitialiseLogging(Cubemos.LogLevel.CM_LL_ERROR, bWriteToConsole: true);
             Api skeletontrackingApi;
 
             // Create cubemos Skeleton tracking Api handle and specify the directory containing a cubemos_license.json file

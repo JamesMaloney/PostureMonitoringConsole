@@ -56,13 +56,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Cubemos.SkeletonTracking, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\Cubemos.SkeletonTracking.3.1.0\lib\net40\Cubemos.SkeletonTracking.dll</HintPath>
+      <HintPath>..\packages\Cubemos.SkeletonTracking.3.1.2\lib\net40\Cubemos.SkeletonTracking.dll</HintPath>
     </Reference>
     <Reference Include="Intel.Realsense">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Intel RealSense SDK 2.0\bin\x64\Intel.Realsense.dll</HintPath>
-    </Reference>
-    <Reference Include="LightBuzz.Vitruvius">
-      <HintPath>..\..\..\..\Desktop\LightBuzz.Vitruvius.Free.2.5.0\Assemblies\WPF\LightBuzz.Vitruvius.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="System" />
@@ -87,13 +84,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\Cubemos.SkeletonTracking.3.1.0\build\Cubemos.SkeletonTracking.targets" Condition="Exists('..\packages\Cubemos.SkeletonTracking.3.1.0\build\Cubemos.SkeletonTracking.targets')" />
+  <Import Project="..\packages\Cubemos.SkeletonTracking.3.1.2\build\Cubemos.SkeletonTracking.targets" Condition="Exists('..\packages\Cubemos.SkeletonTracking.3.1.2\build\Cubemos.SkeletonTracking.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Cubemos.SkeletonTracking.3.1.0\build\Cubemos.SkeletonTracking.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Cubemos.SkeletonTracking.3.1.0\build\Cubemos.SkeletonTracking.targets'))" />
-    <Error Condition="!Exists('..\packages\Intel.RealSenseWithNativeDll.2.47.0\build\Intel.RealSenseWithNativeDll.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Intel.RealSenseWithNativeDll.2.47.0\build\Intel.RealSenseWithNativeDll.targets'))" />
+    <Error Condition="!Exists('..\packages\Cubemos.SkeletonTracking.3.1.2\build\Cubemos.SkeletonTracking.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Cubemos.SkeletonTracking.3.1.2\build\Cubemos.SkeletonTracking.targets'))" />
+    <Error Condition="!Exists('..\packages\Intel.RealSenseWithNativeDll.2.36.0\build\Intel.RealSenseWithNativeDll.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Intel.RealSenseWithNativeDll.2.36.0\build\Intel.RealSenseWithNativeDll.targets'))" />
   </Target>
-  <Import Project="..\packages\Intel.RealSenseWithNativeDll.2.47.0\build\Intel.RealSenseWithNativeDll.targets" Condition="Exists('..\packages\Intel.RealSenseWithNativeDll.2.47.0\build\Intel.RealSenseWithNativeDll.targets')" />
+  <Import Project="..\packages\Intel.RealSenseWithNativeDll.2.36.0\build\Intel.RealSenseWithNativeDll.targets" Condition="Exists('..\packages\Intel.RealSenseWithNativeDll.2.36.0\build\Intel.RealSenseWithNativeDll.targets')" />
 </Project>
