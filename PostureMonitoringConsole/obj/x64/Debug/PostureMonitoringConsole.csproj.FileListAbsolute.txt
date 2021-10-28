@@ -6,6 +6,5 @@ C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitor
 C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitoringConsole\bin\x64\Debug\Intel.Realsense.dll
 C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitoringConsole\bin\x64\Debug\Cubemos.SkeletonTracking.xml
 C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitoringConsole\obj\x64\Debug\PostureMonitoringConsole.csproj.CoreCompileInputs.cache
-C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitoringConsole\obj\x64\Debug\PostureMonitoringConsole.csproj.CopyComplete
 C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitoringConsole\obj\x64\Debug\PostureMonitoringConsole.exe
 C:\Users\Giacomo Menchi\Documents\GitHub\PostureMonitoringConsole\PostureMonitoringConsole\obj\x64\Debug\PostureMonitoringConsole.pdb

@@ -143,17 +143,19 @@ namespace PoseRecognition
             // Create output file headers
             File.AppendAllText("output.csv", "Camera Name,Camera Serial,Body Part,Timestamp,X,Y,Z\n");
 
+            //Save frames as images in temp folder
+            Directory.CreateDirectory("temp/");
+            int frameCounter = 1;
+
             Console.WriteLine("Starting image acquisition and skeleton keypoints");
             while (true)
             {
-                int pipelineID = 0;
-
                 // We wait for the next available FrameSet and using it as a releaser object that would
                 // track all newly allocated .NET frames, and ensure deterministic finalization at the end
                 // of scope.
-                using (var releaser = new FramesReleaser())
+                using (FramesReleaser releaser = new FramesReleaser())
                 {
-                    using (var frames = Pipeline.WaitForFrames())
+                    using (FrameSet frames = Pipeline.WaitForFrames())
                     {
                         FrameSet frameSet = frames.ApplyFilter(align).DisposeWith(releaser).AsFrameSet().DisposeWith(releaser);
 
@@ -166,14 +168,18 @@ namespace PoseRecognition
                         // Preprocess the input image
                         Bitmap inputImage = Utils.FrameToBitmap(colorFrame);
 
+                        //Save image to temp folder
+                        inputImage.Save("temp/" + frameCounter + ".jpg");
+                        frameCounter++;
+
                         // Get 2D joints
-                        skeletontrackingApi.RunSkeletonTracking(ref inputImage, networkHeight, out List<SkeletonKeypoints> skeletons, pipelineID);
+                        skeletontrackingApi.RunSkeletonTracking(ref inputImage, networkHeight, out List<SkeletonKeypoints> skeletons, 0);
 
                         Console.WriteLine(skeletons.Count + " skeletons detected");
 
                         //KeyValuePair<string, Point3D?>? isOperativeInWorkingArea = null;
 
-                        foreach (var skeleton in skeletons)
+                        foreach (SkeletonKeypoints skeleton in skeletons)
                         {
                             // Calculate 3D joints for entire skeleton
                             Dictionary<string, Point3D?> skeleton3D = Utils.Get3DCoordinates(skeleton, depthFrame, intrinsicsDepthImagerMaster);
