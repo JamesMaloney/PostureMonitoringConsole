@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Net.Sockets;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Media.Media3D;
 
 using Intel.RealSense;
@@ -22,10 +22,7 @@ namespace PoseRecognition
         readonly int FrameWidth = 1280;
         readonly int FrameHeight = 720;
 
-        Pipeline Pipeline;
-        PipelineProfile pp;
-        Config Config;
-        Context Context;
+        private ReaderWriterLockSlim lock_ = new ReaderWriterLockSlim();
 
         public static void Main()
         {
@@ -33,11 +30,19 @@ namespace PoseRecognition
             //p.AnglesCalculationTest();
             //p.ReadFromFile();
             //return;
-            bool success = p.ReadRealtime();
+            bool success = p.SetupAndFindCameras();
             if (!success)
             {
                 Console.ReadLine();
                 Environment.Exit(1);
+            }
+            else
+            {
+                while (true)
+                {
+                    if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                        Environment.Exit(0);
+                }
             }
         }
 
@@ -58,46 +63,15 @@ namespace PoseRecognition
             Console.ReadKey();
         }
 
-        private bool ReadRealtime()
+        private bool SetupAndFindCameras()
         {
-            // Initialize logging to output all messages with severity level INFO or higher to the console
-            //Cubemos.Api.InitialiseLogging(Cubemos.LogLevel.CM_LL_ERROR, bWriteToConsole: true);
-            Api skeletontrackingApi;
+            Context Context = new Context();
 
-            // Create cubemos Skeleton tracking Api handle and specify the directory containing a cubemos_license.json file
-            try
-            {
-                skeletontrackingApi = new Api(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Cubemos\\SkeletonTracking\\license");
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("SDK is not activated.");
-                return false;
-            }
-
-            // Initialise cubemos DNN framework with the required model
-            try
-            {
-                skeletontrackingApi.LoadModel(Cubemos.TargetComputeDevice.CM_CPU, CubemosFolder + "\\models\\fp32\\skeleton-tracking.cubemos");
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("Model not found");
-                return false;
-            }
-
-            // Initialise the intel realsense pipeline as an acquisition device
-            Pipeline = new Pipeline();
-            Config = new Config();
-            Context = new Context();
-
-            // create the alignment object to the color stream
-            Align align = new Align(Intel.RealSense.Stream.Color);
+            // Print header to output file
+            File.AppendAllText("mixed_output.csv", "Camera Name,Camera Serial,Body Part,Timestamp,X,Y,Z\n");
 
             // Choose and initialise camera
-            List<(string, string)> CameraSources = new List<(string, string)>();
             DeviceList availableDevices;
-            int ChosenCamera = 0;
 
             while (true)
             {
@@ -107,47 +81,97 @@ namespace PoseRecognition
                 Console.WriteLine("NO DEVICE DETECTED! Press Enter to recheck!");
                 Console.ReadKey();
             }
-            if (availableDevices.Count == 1)
-                CameraSources.Add((availableDevices[0].Info[CameraInfo.Name], availableDevices[0].Info[CameraInfo.SerialNumber]));
-            else
+
+            // Create a list with camera info and apis
+            List<(Device, Api)> devices = new List<(Device, Api)>();
+            foreach (Device camera in availableDevices)
             {
-                Console.Write("Write number to choose camera: ");
-                for (int i = 0; i < availableDevices.Count; i++)
+                // Initialize logging to output all messages with severity level INFO or higher to the console
+                //Cubemos.Api.InitialiseLogging(Cubemos.LogLevel.CM_LL_ERROR, bWriteToConsole: true);
+                Api skeletontrackingApi;
+
+                // Create cubemos Skeleton tracking Api handle and specify the directory containing a cubemos_license.json file
+                try
                 {
-                    Console.Write(i+1 + " " + availableDevices[i].Info[CameraInfo.Name] + " " + availableDevices[i].Info[CameraInfo.SerialNumber] + "; ");
-                    CameraSources.Add((availableDevices[i].Info[CameraInfo.Name], availableDevices[i].Info[CameraInfo.SerialNumber]));
+                    skeletontrackingApi = new Api(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Cubemos\\SkeletonTracking\\license");
                 }
-                ChosenCamera = int.Parse(Console.ReadKey().KeyChar.ToString()) - 1;
-                Console.WriteLine();
+                catch (Exception)
+                {
+                    Console.WriteLine("SDK is not activated.");
+                    return false;
+                }
+
+                // Initialise cubemos DNN framework with the required model
+                try
+                {
+                    skeletontrackingApi.LoadModel(Cubemos.TargetComputeDevice.CM_CPU, CubemosFolder + "\\models\\fp32\\skeleton-tracking.cubemos");
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Model not found");
+                    return false;
+                }
+
+                devices.Add((camera, skeletontrackingApi));
             }
 
-            // Save camera info
-            string cameraInfo = availableDevices[ChosenCamera].Info[CameraInfo.Name] + "," + availableDevices[ChosenCamera].Info[CameraInfo.SerialNumber];
+            // Start one thread for each camera available
+            foreach (var device in devices)
+            {
+                Task.Factory.StartNew(() => ReadRealtime(device.Item1, device.Item2));
+                Console.WriteLine("Camera \"" + device.Item1.Info[CameraInfo.Name] + "\" with SN \"" + device.Item1.Info[CameraInfo.SerialNumber] + "\" detected");
+            }
+            return true;
+            //if (availableDevices.Count == 1)
+            //{
+            //    cameraSources.Add((availableDevices[0].Info[CameraInfo.Name], availableDevices[0].Info[CameraInfo.SerialNumber]));
+            //    Console.WriteLine("Single camera \"" + CameraInfo.Name + "\" with SN \"" + CameraInfo.SerialNumber + "\" detected");
+            //}
+            //else
+            //{
+            //    Console.WriteLine("Write number to choose camera: ");
+            //    for (int i = 0; i < availableDevices.Count; i++)
+            //    {
+            //        Console.WriteLine(i+1 + " " + availableDevices[i].Info[CameraInfo.Name] + " " + availableDevices[i].Info[CameraInfo.SerialNumber] + "; ");
+            //        cameraSources.Add((availableDevices[i].Info[CameraInfo.Name], availableDevices[i].Info[CameraInfo.SerialNumber]));
+            //    }
+            //    chosenCamera = int.Parse(Console.ReadKey().KeyChar.ToString()) - 1;
+            //    Console.WriteLine();
+            //}
+        }
 
-            // Create and config the pipeline to stream color and depth frames.
-            Config.EnableDevice(CameraSources[ChosenCamera].Item2);
+        public void ReadRealtime(Device camera, Api skeletontrackingApi)
+        {
+            // Save camera info
+            string cameraInfo = camera.Info[CameraInfo.Name] + "," + camera.Info[CameraInfo.SerialNumber];
+
+            Config Config = new Config();
+
+            // Create and config the pipeline to stream color and depth frames
+            Config.EnableDevice(camera.Info[CameraInfo.SerialNumber]);
             Config.EnableStream(Intel.RealSense.Stream.Color, FrameWidth, FrameHeight, Format.Bgr8, framerate: 30);
             Config.EnableStream(Intel.RealSense.Stream.Depth, FrameWidth, FrameHeight, framerate: 30);
 
-            // Create and config the pipeline to stream color and depth frames.
-            pp = Pipeline.Start(Config);
+            // create the alignment object to the color stream
+            Align align = new Align(Intel.RealSense.Stream.Color);
+
+            // Initialise the intel realsense pipeline as an acquisition device
+            Pipeline Pipeline = new Pipeline();
+
+            // Create and config the pipeline to stream color and depth frames
+            PipelineProfile pp = Pipeline.Start(Config);
             Intrinsics intrinsicsDepthImagerMaster = pp.GetStream(Intel.RealSense.Stream.Depth).As<VideoStreamProfile>().GetIntrinsics();
 
             // Set the network input size to 128 for faster inference
             int networkHeight = 128;
 
-            // Udp Socket for data exchange
-            UdpClient udpClient = new UdpClient();
-            udpClient.Connect("localhost", 65000);
-
             // Create output file headers
-            File.AppendAllText("output.csv", "Camera Name,Camera Serial,Body Part,Timestamp,X,Y,Z\n");
+            File.AppendAllText(camera.Info[CameraInfo.SerialNumber] + ".csv", "Camera Name,Camera Serial,Body Part,Timestamp,X,Y,Z\n");
 
             //Save frames as images in temp folder
-            Directory.CreateDirectory("temp/");
-            int frameCounter = 1;
+            Directory.CreateDirectory(camera.Info[CameraInfo.SerialNumber] + "/");
 
-            Console.WriteLine("Starting image acquisition and skeleton keypoints");
+            Console.WriteLine("Starting image acquisition and skeleton keypoints for \"" + camera.Info[CameraInfo.Name] + "\" with SN \"" + camera.Info[CameraInfo.SerialNumber] + "\"");
             while (true)
             {
                 // We wait for the next available FrameSet and using it as a releaser object that would
@@ -168,9 +192,11 @@ namespace PoseRecognition
                         // Preprocess the input image
                         Bitmap inputImage = Utils.FrameToBitmap(colorFrame);
 
+                        // Save timestamp
+                        string unixTimestamp = Convert.ToString((long)DateTime.Now.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds);
+
                         //Save image to temp folder
-                        inputImage.Save("temp/" + frameCounter + ".jpg");
-                        frameCounter++;
+                        inputImage.Save(camera.Info[CameraInfo.SerialNumber] + "/" + unixTimestamp + ".jpg");
 
                         // Get 2D joints
                         skeletontrackingApi.RunSkeletonTracking(ref inputImage, networkHeight, out List<SkeletonKeypoints> skeletons, 0);
@@ -184,9 +210,6 @@ namespace PoseRecognition
                             // Calculate 3D joints for entire skeleton
                             Dictionary<string, Point3D?> skeleton3D = Utils.Get3DCoordinates(skeleton, depthFrame, intrinsicsDepthImagerMaster);
 
-                            // Save timestamp
-                            string unixTimestamp = Convert.ToString((long)DateTime.Now.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds);
-
                             // Print joints
                             foreach (var joint in skeleton3D)
                             {
@@ -196,9 +219,10 @@ namespace PoseRecognition
                                     output = cameraInfo + "," + joint.Key + "," + unixTimestamp + ",,,\n";
                                 else
                                     output = cameraInfo + "," + joint.Key + "," + unixTimestamp + "," + joint.Value.ToString() + "\n";
-                                udpClient.Send(Encoding.UTF32.GetBytes(output), Encoding.UTF32.GetByteCount(output));
-
-                                File.AppendAllText("output.csv", output);
+                                File.AppendAllText(camera.Info[CameraInfo.SerialNumber] + ".csv", output);
+                                lock_.EnterWriteLock();
+                                File.AppendAllText("mixed_output.csv", output);
+                                lock_.ExitWriteLock();
                             }
 
                             // Body angles calculations
