@@ -10,6 +10,7 @@ using Intel.RealSense;
 
 using Cubemos.SkeletonTracking;
 using static Cubemos.SkeletonTracking.Api;
+using System.Diagnostics;
 
 namespace PoseRecognition
 {
@@ -22,7 +23,7 @@ namespace PoseRecognition
         readonly int FrameWidth = 1280;
         readonly int FrameHeight = 720;
 
-        private ReaderWriterLockSlim lock_ = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim lock_ = new ReaderWriterLockSlim();
 
         public static void Main()
         {
@@ -68,7 +69,7 @@ namespace PoseRecognition
             Context Context = new Context();
 
             // Print header to output file
-            File.AppendAllText("mixed_output.csv", "Camera Name,Camera Serial,Body Part,Timestamp,X,Y,Z\n");
+            File.AppendAllText("mixed_output.csv", "Camera Name,Camera Serial,Body Part,Milliseconds,X,Y,Z\n");
 
             // Choose and initialise camera
             DeviceList availableDevices;
@@ -142,6 +143,8 @@ namespace PoseRecognition
 
         public void ReadRealtime(Device camera, Api skeletontrackingApi)
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
             // Save camera info
             string cameraInfo = camera.Info[CameraInfo.Name] + "," + camera.Info[CameraInfo.SerialNumber];
 
@@ -166,7 +169,7 @@ namespace PoseRecognition
             int networkHeight = 128;
 
             // Create output file headers
-            File.AppendAllText(camera.Info[CameraInfo.SerialNumber] + ".csv", "Camera Name,Camera Serial,Body Part,Timestamp,X,Y,Z\n");
+            File.AppendAllText(camera.Info[CameraInfo.SerialNumber] + ".csv", "Body Part,Milliseconds,X,Y,Z\n");
 
             //Save frames as images in temp folder
             Directory.CreateDirectory(camera.Info[CameraInfo.SerialNumber] + "/");
@@ -193,10 +196,10 @@ namespace PoseRecognition
                         Bitmap inputImage = Utils.FrameToBitmap(colorFrame);
 
                         // Save timestamp
-                        string unixTimestamp = Convert.ToString((long)DateTime.Now.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds);
+                        long timestamp = stopwatch.ElapsedMilliseconds;
 
                         //Save image to temp folder
-                        inputImage.Save(camera.Info[CameraInfo.SerialNumber] + "/" + unixTimestamp + ".jpg");
+                        inputImage.Save(camera.Info[CameraInfo.SerialNumber] + "/" + timestamp + ".jpg");
 
                         // Get 2D joints
                         skeletontrackingApi.RunSkeletonTracking(ref inputImage, networkHeight, out List<SkeletonKeypoints> skeletons, 0);
@@ -215,13 +218,32 @@ namespace PoseRecognition
                             {
                                 // Write to file and send
                                 string output;
-                                if (joint.Value == null)
-                                    output = cameraInfo + "," + joint.Key + "," + unixTimestamp + ",,,\n";
-                                else
-                                    output = cameraInfo + "," + joint.Key + "," + unixTimestamp + "," + joint.Value.ToString() + "\n";
+                                string info = cameraInfo + ",";
+                                // Switch left and right ears as they appear to be wrong
+                                switch (joint.Key)
+                                {
+                                    case "quizas":
+                                        if (joint.Value == null)
+                                            output = "quizas2," + timestamp + ",,,\n";
+                                        else
+                                            output = "quizas2," + timestamp + "," + joint.Value.ToString() + "\n";
+                                        break;
+                                    case "quizas2":
+                                        if (joint.Value == null)
+                                            output = "quizas," + timestamp + ",,,\n";
+                                        else
+                                            output = "quizas," + timestamp + "," + joint.Value.ToString() + "\n";
+                                        break;
+                                    default:
+                                        if (joint.Value == null)
+                                            output = joint.Key + "," + timestamp + ",,,\n";
+                                        else
+                                            output = joint.Key + "," + timestamp + "," + joint.Value.ToString() + "\n";
+                                        break;
+                                }
                                 File.AppendAllText(camera.Info[CameraInfo.SerialNumber] + ".csv", output);
                                 lock_.EnterWriteLock();
-                                File.AppendAllText("mixed_output.csv", output);
+                                File.AppendAllText("mixed_output.csv", info + output);
                                 lock_.ExitWriteLock();
                             }
 
