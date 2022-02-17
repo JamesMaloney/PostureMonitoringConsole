@@ -222,17 +222,17 @@ namespace PoseRecognition
                                 // Switch left and right ears as they appear to be wrong
                                 switch (joint.Key)
                                 {
-                                    case "quizas":
+                                    case "Left Ear":
                                         if (joint.Value == null)
-                                            output = "quizas2," + timestamp + ",,,\n";
+                                            output = "Right Ear," + timestamp + ",,,\n";
                                         else
-                                            output = "quizas2," + timestamp + "," + joint.Value.ToString() + "\n";
+                                            output = "Right Ear," + timestamp + "," + joint.Value.ToString() + "\n";
                                         break;
-                                    case "quizas2":
+                                    case "Right Ear":
                                         if (joint.Value == null)
-                                            output = "quizas," + timestamp + ",,,\n";
+                                            output = "Left Ear," + timestamp + ",,,\n";
                                         else
-                                            output = "quizas," + timestamp + "," + joint.Value.ToString() + "\n";
+                                            output = "Left Ear," + timestamp + "," + joint.Value.ToString() + "\n";
                                         break;
                                     default:
                                         if (joint.Value == null)
